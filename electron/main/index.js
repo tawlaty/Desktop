@@ -104,10 +104,10 @@ function createMainWindow() {
  *───────────────────────────────────────────────────────────────────────────*/
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../../assets/tray-icon.png');
+  const iconPath = path.join(__dirname, '../../assets/logo.png');
   const trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
   tray = new Tray(trayIcon);
-  tray.setToolTip('BaristaFlow');
+  tray.setToolTip('Baristaflow');
 
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show', click: () => mainWindow?.show() },

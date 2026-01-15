@@ -169,27 +169,23 @@ function initializeUpdater(window) {
 function checkForUpdates(window) {
   if (window) mainWindow = window;
   
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Development Mode',
       message: 'Auto-updater is disabled in development mode.',
+      detail: 'Updates only work in production builds.',
       buttons: ['OK'],
     });
     return;
   }
   
-  // Show checking dialog
-  const checking = dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'Checking for Updates',
-    message: 'Checking for updates...',
-    buttons: ['Cancel'],
-  });
+  // Show checking message (non-blocking)
+  console.log('Checking for updates...');
   
   autoUpdater.checkForUpdates()
     .then(() => {
-      // If no update, show message
+      // If no update, show message after a delay
       setTimeout(() => {
         if (!updateAvailable) {
           dialog.showMessageBox(mainWindow, {
@@ -199,10 +195,17 @@ function checkForUpdates(window) {
             buttons: ['OK'],
           });
         }
-      }, 2000);
+      }, 3000);
     })
     .catch((err) => {
-      dialog.showErrorBox('Update Check Failed', 'Could not check for updates. Please try again later.');
+      console.error('Update check error:', err);
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Check Failed',
+        message: 'Could not check for updates.',
+        detail: err.message || 'Please check your internet connection and try again.',
+        buttons: ['OK'],
+      });
     });
 }
 
