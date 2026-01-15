@@ -1,6 +1,6 @@
 {
   "name": "baristaflow",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "productName": "Baristaflow",
   "description": "BaristaFlow POS – Electron Forge + Vite + Tailwind",
   "main": "electron/main/index.js",
