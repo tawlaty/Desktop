@@ -3,7 +3,7 @@
  * Handles checking for updates, downloading, and notifying users
  */
 const { autoUpdater } = require('electron-updater');
-const { dialog, Notification } = require('electron');
+const { dialog, Notification, app } = require('electron');
 
 // Configure updater
 autoUpdater.autoDownload = false; // Don't auto-download, ask user first
