@@ -7,6 +7,17 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   /*───────────────────────────────────────────────────────────────────────────*
+   * Updates
+   *───────────────────────────────────────────────────────────────────────────*/
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  onUpdateNotification: (callback) => {
+    ipcRenderer.on('update-available-notification', (event, available) => callback(available));
+  },
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on('update-download-progress', (event, progress) => callback(progress));
+  },
+
+  /*───────────────────────────────────────────────────────────────────────────*
    * Settings
    *───────────────────────────────────────────────────────────────────────────*/
   getSettings: () => ipcRenderer.invoke('settings:get'),

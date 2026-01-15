@@ -1,0 +1,37 @@
+name: Create Release on Version Change
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Get current and previous version
+        id: version
+        run: |
+          git fetch --prune --unshallow || true
+          PREV_SHA=$(git rev-parse HEAD~1)
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+          PREV_VERSION=$(git show $PREV_SHA:package.json | jq -r '.version')
+
+          echo "Current: $CURRENT_VERSION"
+          echo "Previous: $PREV_VERSION"
+
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "previous=$PREV_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag and release
+        if: steps.version.outputs.current != steps.version.outputs.previous
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.current }}
+          name: Release v${{ steps.version.outputs.current }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}

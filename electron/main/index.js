@@ -26,7 +26,7 @@ let tray = null;
 const { register: registerSettings, settingsStore } = require('./ipc/settings');
 const printersIpc = require('./ipc/printers');
 const sqliteIpc = require('./ipc/sqlite');
-const { initializeUpdater } = require('./updater');
+const { initializeUpdater, checkForUpdates } = require('./updater');
 // const serialIpc = require('./ipc/serial'); // enable when ready
 
 /*───────────────────────────────────────────────────────────────────────────*
@@ -112,6 +112,8 @@ function createTray() {
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show', click: () => mainWindow?.show() },
     { type: 'separator' },
+    { label: 'Check for Updates', click: () => checkForUpdates(mainWindow) },
+    { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
   ]);
   tray.setContextMenu(contextMenu);
@@ -126,4 +128,9 @@ function registerIpcHandlers() {
   registerSettings(ipcMain, app);
   printersIpc.register(ipcMain, settingsStore);
   sqliteIpc.register(ipcMain, app);
+  
+  // Handle manual update check from renderer
+  ipcMain.handle('check-for-updates', () => {
+    checkForUpdates(mainWindow);
+  });
 }
