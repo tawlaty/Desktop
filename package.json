@@ -1,0 +1,43 @@
+{
+  "name": "baristaflow",
+  "version": "1.0.0",
+  "productName": "Baristaflow",
+  "description": "BaristaFlow POS – Electron Forge + Vite + Tailwind",
+  "main": "electron/main/index.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "build-production": "electron-forge make --platform=win32 --arch=x64",
+    "publish": "electron-forge publish",
+    "lint": "eslint electron --ext .js,.ts"
+  },
+  "author": "BaristaFlow",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.6.0",
+    "@electron-forge/maker-deb": "^7.6.0",
+    "@electron-forge/maker-rpm": "^7.6.0",
+    "@electron-forge/maker-squirrel": "^7.6.0",
+    "@electron-forge/maker-zip": "^7.6.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.6.0",
+    "@electron-forge/plugin-fuses": "^7.6.0",
+    "electron": "23.1.4",
+    "eslint": "^9.17.0",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
+    "to-ico": "^1.1.5"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.4.7",
+    "electron-squirrel-startup": "^1.0.1"
+  },
+  "optionalDependencies": {
+    "@thiagoelg/node-printer": "0.6.2",
+    "electron-pos-msh-printer": "^1.0.2"
+  },
+  "config": {
+    "forge": "./forge.config.js"
+  }
+}
