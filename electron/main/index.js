@@ -26,6 +26,7 @@ let tray = null;
 const { register: registerSettings, settingsStore } = require('./ipc/settings');
 const printersIpc = require('./ipc/printers');
 const sqliteIpc = require('./ipc/sqlite');
+const { initializeUpdater } = require('./updater');
 // const serialIpc = require('./ipc/serial'); // enable when ready
 
 /*───────────────────────────────────────────────────────────────────────────*
@@ -36,6 +37,9 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createMainWindow();
   createTray();
+  
+  // Initialize auto-updater after window is created
+  initializeUpdater(mainWindow);
 
   app.on('activate', () => {
     // macOS dock re-open

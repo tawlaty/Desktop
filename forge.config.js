@@ -11,6 +11,19 @@ module.exports = {
   },
   rebuildConfig: {},
   outDir: 'production-exe',
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'BaristaFlow',
+          name: 'Desktop'
+        },
+        prerelease: false,
+        draft: true
+      }
+    }
+  ],
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
