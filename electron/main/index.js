@@ -5,15 +5,12 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('node:path');
 
-// Handle Squirrel Windows installer events
-if (require('electron-squirrel-startup')) app.quit();
-
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const isDev = !app.isPackaged;
 
-/** Vite dev server URL (set VITE_DEV_SERVER_URL in .env or default to 5173) */
-const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'https://app.baristaflow.com/';
+/** Web app URL – loaded as webview in both dev and production */
+const APP_URL = process.env.APP_URL || 'https://app.baristaflow.com';
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -75,19 +72,16 @@ function createMainWindow() {
   // Graceful show after ready
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
-  // Load renderer
+  // Load web app as webview (same URL in dev and production)
+  mainWindow.loadURL(APP_URL);
+
   if (isDev) {
-    mainWindow.loadURL(VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
-  } else {
-    // Production: load built Frontend assets from extraResource
-    const rendererPath = path.join(process.resourcesPath, 'dist', 'index.html');
-    mainWindow.loadFile(rendererPath);
   }
 
   // Prevent external navigation for security
   mainWindow.webContents.on('will-navigate', (e, url) => {
-    if (!url.startsWith(VITE_DEV_SERVER_URL) && !url.startsWith('file://')) {
+    if (!url.startsWith(APP_URL)) {
       e.preventDefault();
     }
   });
