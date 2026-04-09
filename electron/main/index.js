@@ -33,6 +33,7 @@ const { initializeUpdater, checkForUpdates } = require('./updater');
 app.whenReady().then(() => {
   registerIpcHandlers();
   createMainWindow();
+  createAppMenu();
   createTray();
   
   // Initialize auto-updater after window is created
@@ -96,6 +97,52 @@ function createMainWindow() {
 /*───────────────────────────────────────────────────────────────────────────*
  * Tray
  *───────────────────────────────────────────────────────────────────────────*/
+
+function createAppMenu() {
+  const template = [
+    {
+      label: 'Baristaflow',
+      submenu: [
+        { label: `Version ${app.getVersion()}`, enabled: false },
+        { type: 'separator' },
+        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => mainWindow?.webContents.reload() },
+        { type: 'separator' },
+        { role: 'quit', label: 'Exit' },
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: `Version: ${app.getVersion()}`,
+          enabled: false,
+        },
+        { type: 'separator' },
+        {
+          label: 'Check for Updates...',
+          click: () => checkForUpdates(mainWindow),
+        },
+        { type: 'separator' },
+        {
+          label: 'About Baristaflow',
+          click: () => {
+            const { dialog } = require('electron');
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About Baristaflow',
+              message: 'Baristaflow POS',
+              detail: `Version: ${app.getVersion()}\nElectron: ${process.versions.electron}\nNode: ${process.versions.node}\nChromium: ${process.versions.chrome}`,
+              buttons: ['OK'],
+            });
+          },
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 function createTray() {
   const iconPath = path.join(__dirname, '../../assets/logo.png');
