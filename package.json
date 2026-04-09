@@ -1,6 +1,6 @@
 {
   "name": "baristaflow",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "productName": "Baristaflow",
   "description": "BaristaFlow POS – Electron Desktop App",
   "main": "electron/main/index.js",
