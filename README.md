@@ -94,3 +94,6 @@ Installers are output to `Desktop/out/make/`.
 ---
 
 © 2024 BaristaFlow
+
+
+<!-- Security scan triggered at 2026-08-31 16:22:46 -->
