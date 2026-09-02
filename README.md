@@ -105,3 +105,5 @@ Installers are output to `Desktop/out/make/`.
 <!-- Security scan triggered at 2026-09-02 06:31:50 -->
 
 <!-- Security scan triggered at 2026-09-02 06:38:54 -->
+
+<!-- Security scan triggered at 2026-09-02 07:05:31 -->
