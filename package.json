@@ -10,7 +10,7 @@
     "build": "electron-builder --win --x64",
     "build-production": "electron-builder --win --x64",
     "publish": "electron-builder --win --x64 --publish always",
-    "lint": "eslint electron --ext .js,.ts"
+    "lint": "eslint ."
   },
   "author": "BaristaFlow",
   "license": "MIT",
@@ -47,11 +47,11 @@
     }
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "electron": "23.1.4",
     "electron-builder": "^25.1.8",
     "eslint": "^9.17.0",
-    "png-to-ico": "^3.0.1",
-    "sharp": "^0.34.5",
+    "globals": "^14.0.0",
     "to-ico": "^1.1.5"
   },
   "dependencies": {
