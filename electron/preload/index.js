@@ -35,41 +35,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openDrawer: () => ipcRenderer.invoke('printers:openDrawer'),
 
   /*───────────────────────────────────────────────────────────────────────────*
-   * SQLite Database (Backup & Reporting)
-   *───────────────────────────────────────────────────────────────────────────*/
-  db: {
-    // Orders
-    saveOrder: (order) => ipcRenderer.invoke('sqlite:order:save', order),
-    getOrder: (localId) => ipcRenderer.invoke('sqlite:order:get', localId),
-    getPendingOrders: () => ipcRenderer.invoke('sqlite:order:getPending'),
-    updateOrderSyncStatus: (localId, status, serverId, error) => 
-      ipcRenderer.invoke('sqlite:order:updateSyncStatus', localId, status, serverId, error),
-    getRecentOrders: (limit) => ipcRenderer.invoke('sqlite:order:getRecent', limit),
-    
-    // Products
-    syncProducts: (products) => ipcRenderer.invoke('sqlite:products:sync', products),
-    getProducts: () => ipcRenderer.invoke('sqlite:products:getAll'),
-    
-    // Categories
-    syncCategories: (categories) => ipcRenderer.invoke('sqlite:categories:sync', categories),
-    getCategories: () => ipcRenderer.invoke('sqlite:categories:getAll'),
-    
-    // Tables
-    syncTables: (tables) => ipcRenderer.invoke('sqlite:tables:sync', tables),
-    getTables: () => ipcRenderer.invoke('sqlite:tables:getAll'),
-    updateTableStatus: (tableId, status, orderId) => 
-      ipcRenderer.invoke('sqlite:tables:updateStatus', tableId, status, orderId),
-    
-    // Settings
-    getSetting: (key) => ipcRenderer.invoke('sqlite:settings:get', key),
-    setSetting: (key, value) => ipcRenderer.invoke('sqlite:settings:set', key, value),
-    
-    // Sync log
-    logSync: (action, entityType, entityId, status, error) =>
-      ipcRenderer.invoke('sqlite:sync:log', action, entityType, entityId, status, error),
-  },
-
-  /*───────────────────────────────────────────────────────────────────────────*
    * Serial / Scale / Scanner (placeholder – enable when IPC module ready)
    *───────────────────────────────────────────────────────────────────────────*/
   // listSerialPorts: () => ipcRenderer.invoke('serial:list'),
