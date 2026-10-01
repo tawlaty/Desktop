@@ -27,14 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * Printers
    *───────────────────────────────────────────────────────────────────────────*/
   getPrinters: () => ipcRenderer.invoke('printers:list'),
-  printReceipt: (html, copies) => {
-    console.log(`🌉 [Preload] printReceipt called:`, {
-      htmlLength: html?.length || 0,
-      htmlPreview: html ? html.substring(0, 150) : 'NO HTML',
-      copies
-    });
-    return ipcRenderer.invoke('printers:printReceipt', html, copies);
-  },
+  printReceipt: (html, copies) => ipcRenderer.invoke('printers:printReceipt', html, copies),
   printOrderReceipt: (jsonData, copies) => ipcRenderer.invoke('printers:printOrderReceipt', jsonData, copies),
   printOrderReceiptMulti: (jsonData, copies, printerIds) => ipcRenderer.invoke('printers:printOrderReceiptMulti', jsonData, copies, printerIds),
   printOrderReceiptToAll: (jsonData, copies) => ipcRenderer.invoke('printers:printOrderReceiptToAll', jsonData, copies),
