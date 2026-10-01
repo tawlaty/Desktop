@@ -15,7 +15,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/BaristaFlow/Desktop.git"
+    "url": "https://github.com/tawlaty/Desktop.git"
   },
   "build": {
     "appId": "com.baristaflow.pos",
@@ -41,7 +41,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "BaristaFlow",
+      "owner": "tawlaty",
       "repo": "Desktop"
     }
   },
