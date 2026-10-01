@@ -22,7 +22,6 @@ let tray = null;
  *───────────────────────────────────────────────────────────────────────────*/
 const { register: registerSettings, settingsStore } = require('./ipc/settings');
 const printersIpc = require('./ipc/printers');
-const sqliteIpc = require('./ipc/sqlite');
 const { initializeUpdater, checkForUpdates } = require('./updater');
 // const serialIpc = require('./ipc/serial'); // enable when ready
 
@@ -168,7 +167,6 @@ function createTray() {
 function registerIpcHandlers() {
   registerSettings(ipcMain, app);
   printersIpc.register(ipcMain, settingsStore);
-  sqliteIpc.register(ipcMain, app);
   
   // Handle manual update check from renderer
   ipcMain.handle('check-for-updates', () => {
