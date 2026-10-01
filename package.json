@@ -51,8 +51,6 @@
     "electron-builder": "^25.1.8",
     "eslint": "^9.17.0",
     "globals": "^14.0.0",
-    "png-to-ico": "^3.0.1",
-    "sharp": "^0.34.5",
     "to-ico": "^1.1.5"
   },
   "dependencies": {
