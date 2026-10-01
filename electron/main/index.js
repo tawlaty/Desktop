@@ -10,7 +10,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const isDev = !app.isPackaged;
 
 /** Web app URL – loaded as webview in both dev and production */
-const APP_URL = process.env.APP_URL || 'https://app.baristaflow.com';
+const APP_URL = process.env.APP_URL || 'https://app.tawlaty.com';
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
