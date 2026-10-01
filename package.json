@@ -6,10 +6,10 @@
   "main": "electron/main/index.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test test/",
     "build": "electron-builder --win --x64",
     "build-production": "electron-builder --win --x64",
     "publish": "electron-builder --win --x64 --publish always",
-    "test": "node --test test/",
     "lint": "eslint electron --ext .js,.ts"
   },
   "author": "BaristaFlow",

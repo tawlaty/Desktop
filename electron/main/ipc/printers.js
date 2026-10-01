@@ -2,7 +2,8 @@
  * Enhanced IPC: Printers
  * Full printing functionality with receipt, kitchen orders, labels, and cash drawer support.
  */
-const { BrowserWindow } = require('electron');
+const { app, BrowserWindow } = require('electron');
+const PRINT_DEBUG = !app.isPackaged || process.env.TAWLATY_PRINT_DEBUG === '1';
 
 // Try to load electron-pos-msh-printer for better printing support
 let PosPrinter = null;
@@ -39,7 +40,7 @@ function register(ipcMain, settingsStore) {
    *───────────────────────────────────────────────────────────────────────────*/
   ipcMain.handle('printers:printReceipt', async (_event, html, copies = 1) => {
     // Receipt HTML contains customer data – log its size only, never its content.
-    console.log(`\n🖨️ [IPC printers:printReceipt] Called with:`, {
+    debugLog(`\n🖨️ [IPC printers:printReceipt] Called with:`, {
       htmlLength: html?.length || 0,
       copies,
       htmlType: typeof html
@@ -56,7 +57,7 @@ function register(ipcMain, settingsStore) {
       settings.mainPrinter5,
     ].filter(p => p && p !== '--choose Printer--' && p !== 'please select');
 
-    console.log(`📋 [IPC printers:printReceipt] Filtered main printers:`, mainPrinters);
+    debugLog(`📋 [IPC printers:printReceipt] Filtered main printers:`, mainPrinters);
 
     if (mainPrinters.length === 0) {
       console.error(`❌ [IPC printers:printReceipt] No main printers configured!`);
@@ -65,14 +66,14 @@ function register(ipcMain, settingsStore) {
 
     const results = [];
     for (const printerName of mainPrinters) {
-      console.log(`📤 [IPC printers:printReceipt] Printing to: ${printerName}`);
+      debugLog(`📤 [IPC printers:printReceipt] Printing to: ${printerName}`);
       const result = await printHTML(html, copies, printerName);
-      console.log(`📥 [IPC printers:printReceipt] Result from ${printerName}:`, result);
+      debugLog(`📥 [IPC printers:printReceipt] Result from ${printerName}:`, result);
       results.push({ printer: printerName, ...result });
     }
 
     const allSuccess = results.every(r => r.success);
-    console.log(`✅ [IPC printers:printReceipt] Final result:`, {
+    debugLog(`✅ [IPC printers:printReceipt] Final result:`, {
       allSuccess,
       results
     });
@@ -126,7 +127,7 @@ function register(ipcMain, settingsStore) {
    *───────────────────────────────────────────────────────────────────────────*/
   ipcMain.handle('printers:printOrderReceiptMulti', async (_event, jsonData, copies = 1, printerIds = []) => {
     try {
-      console.log(`\n🖨️ [printOrderReceiptMulti] Called with:`, {
+      debugLog(`\n🖨️ [printOrderReceiptMulti] Called with:`, {
         jsonDataLength: jsonData?.length || 0,
         copies,
         printerIds,
@@ -152,20 +153,20 @@ function register(ipcMain, settingsStore) {
       const orders = JSON.parse(jsonData);
       const results = [];
 
-      console.log(`📋 [printOrderReceiptMulti] Orders to print:`, orders.length);
+      debugLog(`📋 [printOrderReceiptMulti] Orders to print:`, orders.length);
 
       for (const order of orders) {
         const targetPrinters = printerIds.length > 0 ? printerIds : [order.printer_id || 2];
-        console.log(`🎯 [printOrderReceiptMulti] Target printers for order:`, targetPrinters);
+        debugLog(`🎯 [printOrderReceiptMulti] Target printers for order:`, targetPrinters);
 
         for (const printerId of targetPrinters) {
           const printerKey = `orderPrinter${printerId}`;
           const orderPrinter = settings[printerKey];
           
-          console.log(`🔍 [printOrderReceiptMulti] Looking up ${printerKey}:`, orderPrinter || 'not found');
+          debugLog(`🔍 [printOrderReceiptMulti] Looking up ${printerKey}:`, orderPrinter || 'not found');
 
           if (!orderPrinter || orderPrinter === 'please select' || orderPrinter === '--choose Printer--') {
-            console.log(`❌ [printOrderReceiptMulti] Printer ${printerId} not configured`);
+            debugLog(`❌ [printOrderReceiptMulti] Printer ${printerId} not configured`);
             results.push({
               orderId: order.orderId || 'unknown',
               printerId,
@@ -175,9 +176,9 @@ function register(ipcMain, settingsStore) {
             continue;
           }
 
-          console.log(`📤 [printOrderReceiptMulti] Printing to: ${orderPrinter}`);
+          debugLog(`📤 [printOrderReceiptMulti] Printing to: ${orderPrinter}`);
           const result = await printHTML(order.html, copies, orderPrinter);
-          console.log(`📥 [printOrderReceiptMulti] Print result:`, result);
+          debugLog(`📥 [printOrderReceiptMulti] Print result:`, result);
           
           results.push({
             orderId: order.orderId || 'unknown',
@@ -188,7 +189,7 @@ function register(ipcMain, settingsStore) {
         }
       }
 
-      console.log(`✅ [printOrderReceiptMulti] All results:`, results);
+      debugLog(`✅ [printOrderReceiptMulti] All results:`, results);
       return { success: true, results };
     } catch (error) {
       console.error(`❌ [printOrderReceiptMulti] Error:`, error);
@@ -262,7 +263,7 @@ function register(ipcMain, settingsStore) {
           data: openDrawerCommand,
           type: 'RAW',
           success: (jobID) => {
-            console.log(`[printers] Cash drawer opened. Job ID: ${jobID}`);
+            debugLog(`[printers] Cash drawer opened. Job ID: ${jobID}`);
             resolve({ success: true, jobID });
           },
           error: (err) => {
@@ -357,7 +358,7 @@ function printHTML(html, copies, printerName) {
     }
 
     // Receipt HTML contains customer data – log its size only, never its content.
-    console.log(`[printHTML] Called with:`, {
+    debugLog(`[printHTML] Called with:`, {
       htmlLength: html.length,
       printerName,
       copies
@@ -455,7 +456,7 @@ function printHTML(html, copies, printerName) {
           printOptions,
           (success, failureReason) => {
             if (success) {
-              console.log(`✅ [printHTML] Print job sent to "${printOptions.deviceName || printerName}"`);
+              debugLog(`✅ [printHTML] Print job sent to "${printOptions.deviceName || printerName}"`);
               finish({ success: true });
             } else {
               console.error(`❌ [printHTML] Print job FAILED for "${printerName}": ${failureReason || 'Unknown'}`);
@@ -557,6 +558,16 @@ function prepareLabelContent(label, options) {
   }
 
   return data;
+}
+
+/**
+ * Per-print diagnostics. Silent in packaged builds unless the POS operator
+ * starts the app with TAWLATY_PRINT_DEBUG=1; always on in dev (`npm start`).
+ * Errors and warnings still go to console.error / console.warn.
+ * (Function declaration so it is hoisted for the handlers above.)
+ */
+function debugLog(...args) {
+  if (PRINT_DEBUG) console.log(...args);
 }
 
 module.exports = { register };
