@@ -5,16 +5,6 @@
 const { app, BrowserWindow } = require('electron');
 const PRINT_DEBUG = !app.isPackaged || process.env.TAWLATY_PRINT_DEBUG === '1';
 
-// Try to load electron-pos-msh-printer for better printing support
-let PosPrinter = null;
-try {
-  const posPrinterModule = require('electron-pos-msh-printer');
-  PosPrinter = posPrinterModule.PosPrinter;
-  console.log('[printers] ✓ electron-pos-msh-printer loaded successfully');
-} catch (e) {
-  console.log('[printers] electron-pos-msh-printer not available, using webContents.print()');
-}
-
 /**
  * @param {Electron.IpcMain} ipcMain
  * @param {Object} settingsStore - Simple key-value store for printer settings
