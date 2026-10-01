@@ -38,22 +38,14 @@ function register(ipcMain, settingsStore) {
    * Print Receipt (HTML) – Main cash receipt printer
    *───────────────────────────────────────────────────────────────────────────*/
   ipcMain.handle('printers:printReceipt', async (_event, html, copies = 1) => {
+    // Receipt HTML contains customer data – log its size only, never its content.
     console.log(`\n🖨️ [IPC printers:printReceipt] Called with:`, {
       htmlLength: html?.length || 0,
-      htmlPreview: html ? html.substring(0, 200) : 'NO HTML',
       copies,
       htmlType: typeof html
     });
 
     const settings = settingsStore.getAll();
-    console.log(`⚙️ [IPC printers:printReceipt] Current settings:`, {
-      mainPrinter: settings.mainPrinter,
-      mainPrinter1: settings.mainPrinter1,
-      mainPrinter2: settings.mainPrinter2,
-      mainPrinter3: settings.mainPrinter3,
-      mainPrinter4: settings.mainPrinter4,
-      mainPrinter5: settings.mainPrinter5
-    });
 
     const mainPrinters = [
       settings.mainPrinter,
@@ -161,14 +153,6 @@ function register(ipcMain, settingsStore) {
       const results = [];
 
       console.log(`📋 [printOrderReceiptMulti] Orders to print:`, orders.length);
-      console.log(`⚙️ [printOrderReceiptMulti] Available order printers:`, {
-        orderPrinter1: settings.orderPrinter1 || 'not set',
-        orderPrinter2: settings.orderPrinter2 || 'not set',
-        orderPrinter3: settings.orderPrinter3 || 'not set',
-        orderPrinter4: settings.orderPrinter4 || 'not set',
-        orderPrinter5: settings.orderPrinter5 || 'not set',
-        orderPrinter6: settings.orderPrinter6 || 'not set',
-      });
 
       for (const order of orders) {
         const targetPrinters = printerIds.length > 0 ? printerIds : [order.printer_id || 2];
@@ -362,11 +346,19 @@ function register(ipcMain, settingsStore) {
 /*───────────────────────────────────────────────────────────────────────────*
  * Helper: Print HTML to Printer
  *───────────────────────────────────────────────────────────────────────────*/
-async function printHTML(html, copies, printerName) {
-  return new Promise(async (resolve) => {
+/** Upper bound for load + spool of one print job; prevents a hung IPC call. */
+const PRINT_TIMEOUT_MS = 60 * 1000;
+
+function printHTML(html, copies, printerName) {
+  return new Promise((resolve) => {
+    if (typeof html !== 'string' || html.length === 0) {
+      resolve({ success: false, error: 'Nothing to print (empty HTML)' });
+      return;
+    }
+
+    // Receipt HTML contains customer data – log its size only, never its content.
     console.log(`[printHTML] Called with:`, {
       htmlLength: html.length,
-      htmlStart: html.substring(0, 300),
       printerName,
       copies
     });
@@ -393,58 +385,51 @@ async function printHTML(html, copies, printerName) {
       thickFrame: false,
       zoomToPageWidth: true,
       webPreferences: {
+        // Static receipt markup only: no scripts, no <webview>, sandboxed renderer.
         nodeIntegration: false,
         contextIsolation: true,
-        webviewTag: true,
+        sandbox: true,
+        javascript: false,
+        webviewTag: false,
       },
     });
 
-    const encodedHTML = html.replace(/#/g, '%23');
-    console.log(`[printHTML] Encoded HTML length: ${encodedHTML.length}`);
-    
-    printWindow.loadURL(`data:text/html;charset=utf-8,${encodedHTML}`);
+    // Resolve exactly once and always dispose of the hidden window.
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (!printWindow.isDestroyed()) printWindow.destroy();
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      console.error(`[printHTML] Timed out after ${PRINT_TIMEOUT_MS} ms (printer: ${printerName})`);
+      finish({ success: false, error: 'Print timed out', printer: printerName });
+    }, PRINT_TIMEOUT_MS);
+
+    printWindow.webContents.on('render-process-gone', (_event, details) => {
+      console.error(`[printHTML] Print renderer gone:`, details?.reason);
+      finish({ success: false, error: `Print renderer exited: ${details?.reason || 'unknown'}` });
+    });
 
     printWindow.webContents.on('did-finish-load', async () => {
-      console.log(`[printHTML] HTML loaded successfully, checking printers...`);
-      
       try {
         // Get list of printers to verify the printer exists
         const printers = await printWindow.webContents.getPrintersAsync();
-        console.log(`[printHTML] Available printers:`, printers.map(p => ({ name: p.name, isDefault: p.isDefault })));
-        
         const targetPrinter = printers.find(p => p.name === printerName);
         const defaultPrinter = printers.find(p => p.isDefault);
-        
+
         if (!targetPrinter) {
-          console.error(`[printHTML] Printer "${printerName}" not found!`);
-        } else {
-          console.log(`[printHTML] Found printer:`, {
-            name: targetPrinter.name,
-            isDefault: targetPrinter.isDefault,
-            status: targetPrinter.status
-          });
+          console.error(`[printHTML] Printer "${printerName}" not found! Falling back to default: ${defaultPrinter?.name || 'None'}`);
         }
-        
-        console.log(`[printHTML] Default printer:`, defaultPrinter?.name);
-        
-        // Critical: For silent printing to work, the target printer MUST be the default printer
-        // If it's not, we need to print to PDF and send via raw printer commands
-        const useTargetPrinter = targetPrinter && targetPrinter.isDefault;
-        
-        if (!useTargetPrinter && targetPrinter) {
-          console.error(`[printHTML] ❌ CRITICAL: Target printer "${printerName}" is NOT the default printer!`);
-          console.error(`[printHTML] Silent printing will likely fail. You MUST set "${printerName}" as the default printer in Windows.`);
-          console.error(`[printHTML] Instructions: Control Panel → Devices and Printers → Right-click "${printerName}" → Set as default printer`);
-          console.error(`[printHTML] Current default: ${defaultPrinter?.name || 'None'}`);
-        }
-        
+
         // Warn about virtual printers
         if (printerName && (printerName.includes('PDF') || printerName.includes('XPS') || printerName.includes('Fax'))) {
-          console.warn(`[printHTML] ⚠️ WARNING: "${printerName}" appears to be a virtual printer (PDF/XPS/Fax).`);
-          console.warn(`[printHTML] Virtual printers may not work correctly for POS printing.`);
-          console.warn(`[printHTML] Please configure a physical thermal printer instead.`);
+          console.warn(`[printHTML] ⚠️ "${printerName}" appears to be a virtual printer (PDF/XPS/Fax); POS printing may not work.`);
         }
-        
+
         const printOptions = {
           silent: true,
           printBackground: true,
@@ -458,56 +443,47 @@ async function printHTML(html, copies, printerName) {
           },
           copies: copies || 1,
         };
-        
-        // Set the target printer as deviceName
+
+        // Set the target printer as deviceName (silent printing does not need it to be the Windows default)
         if (targetPrinter) {
           printOptions.deviceName = printerName;
-          console.log(`[printHTML] Targeting printer: ${printerName}`);
         } else if (defaultPrinter) {
           printOptions.deviceName = defaultPrinter.name;
-          console.log(`[printHTML] Using system default printer: ${defaultPrinter.name}`);
         }
-        
-        console.log(`[printHTML] Printing with options:`, printOptions);
-        
+
         printWindow.webContents.print(
           printOptions,
           (success, failureReason) => {
-            console.log(`[printHTML] Print callback:`, { success, failureReason });
-            printWindow.close();
             if (success) {
-              console.log(`✅ [printHTML] Print job sent successfully to "${printerName}"`);
-              resolve({ success: true });
+              console.log(`✅ [printHTML] Print job sent to "${printOptions.deviceName || printerName}"`);
+              finish({ success: true });
             } else {
-              console.error(`❌ [printHTML] Print job FAILED for "${printerName}"`);
-              console.error(`[printHTML] Failure reason: ${failureReason || 'Unknown'}`);
-              console.error(`[printHTML] Troubleshooting:`);
-              console.error(`  1. Ensure "${printerName}" is set as DEFAULT printer in Windows`);
-              console.error(`  2. Ensure printer is turned ON and connected`);
-              console.error(`  3. Check if printer name is correct (no typos)`);
-              console.error(`  4. Try using a physical thermal printer instead of PDF/virtual printers`);
-              
-              resolve({ 
-                success: false, 
+              console.error(`❌ [printHTML] Print job FAILED for "${printerName}": ${failureReason || 'Unknown'}`);
+              finish({
+                success: false,
                 error: failureReason || 'Print failed',
                 printer: printerName,
                 isDefault: targetPrinter?.isDefault || false,
-                troubleshooting: 'Set printer as default in Windows or check printer connection'
+                troubleshooting: 'Check that the printer is on, connected and the name in Printer Settings is correct'
               });
             }
           }
         );
       } catch (error) {
         console.error(`[printHTML] Exception during print:`, error);
-        printWindow.close();
-        resolve({ success: false, error: error.message });
+        finish({ success: false, error: error.message });
       }
     });
 
     printWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error(`[printHTML] Failed to load HTML:`, errorCode, errorDescription);
-      printWindow.close();
-      resolve({ success: false, error: `Failed to load: ${errorDescription}` });
+      finish({ success: false, error: `Failed to load: ${errorDescription}` });
+    });
+
+    // base64 data URL: no manual escaping, so '#', '%' and non-ASCII text are all safe.
+    const dataUrl = `data:text/html;charset=utf-8;base64,${Buffer.from(html, 'utf-8').toString('base64')}`;
+    printWindow.loadURL(dataUrl).catch(() => {
+      // Load failures are reported through 'did-fail-load' above.
     });
   });
 }
