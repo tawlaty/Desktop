@@ -24,6 +24,7 @@ const { register: registerSettings, settingsStore } = require('./ipc/settings');
 const printersIpc = require('./ipc/printers');
 const sqliteIpc = require('./ipc/sqlite');
 const { initializeUpdater, checkForUpdates } = require('./updater');
+const { isSameOrigin, guardIpcMain } = require('./security');
 // const serialIpc = require('./ipc/serial'); // enable when ready
 
 /*───────────────────────────────────────────────────────────────────────────*
@@ -47,6 +48,13 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Defence in depth for every webContents (main window + hidden print windows):
+// no <webview> embedding and no popups.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-attach-webview', (e) => e.preventDefault());
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
 });
 
 /*───────────────────────────────────────────────────────────────────────────*
@@ -80,12 +88,15 @@ function createMainWindow() {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
-  // Prevent external navigation for security
-  mainWindow.webContents.on('will-navigate', (e, url) => {
-    if (!url.startsWith(APP_URL)) {
+  // Prevent external navigation for security (exact origin, not a string prefix)
+  const blockForeignNavigation = (e, url) => {
+    if (!isSameOrigin(url, APP_URL)) {
+      console.warn(`[security] Blocked navigation to ${url}`);
       e.preventDefault();
     }
-  });
+  };
+  mainWindow.webContents.on('will-navigate', blockForeignNavigation);
+  mainWindow.webContents.on('will-redirect', blockForeignNavigation);
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
@@ -166,12 +177,15 @@ function createTray() {
  *───────────────────────────────────────────────────────────────────────────*/
 
 function registerIpcHandlers() {
-  registerSettings(ipcMain, app);
-  printersIpc.register(ipcMain, settingsStore);
-  sqliteIpc.register(ipcMain, app);
-  
+  // Every handler rejects calls whose sender frame is not on the APP_URL origin.
+  const trustedIpcMain = guardIpcMain(ipcMain, APP_URL);
+
+  registerSettings(trustedIpcMain, app);
+  printersIpc.register(trustedIpcMain, settingsStore);
+  sqliteIpc.register(trustedIpcMain, app);
+
   // Handle manual update check from renderer
-  ipcMain.handle('check-for-updates', () => {
+  trustedIpcMain.handle('check-for-updates', () => {
     checkForUpdates(mainWindow);
   });
 }
