@@ -1,6 +1,6 @@
 {
   "name": "baristaflow",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "productName": "Tawlaty",
   "description": "Tawlaty POS – Desktop App",
   "main": "electron/main/index.js",
@@ -58,6 +58,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
+    "electron-log": "^5.4.4",
     "electron-updater": "^6.7.3"
   },
   "optionalDependencies": {
