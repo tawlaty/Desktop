@@ -103,7 +103,7 @@ function promptRestart(info) {
     })
     .then((result) => {
       if (result.response === 0) {
-        autoUpdater.quitAndInstall(false, true);
+        autoUpdater.quitAndInstall(true, true);
       }
     })
     .catch((err) => log.error('Update prompt failed:', err))
