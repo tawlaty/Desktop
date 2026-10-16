@@ -1,4 +1,4 @@
-# BaristaFlow Desktop
+# Tawlaty Desktop
 
 Electron Forge app that loads the **Frontend** React UI locally (no remote URL, no `<webview>`).
 
@@ -93,7 +93,7 @@ Installers are output to `Desktop/out/make/`.
 
 ---
 
-© 2024 BaristaFlow
+© 2024 Tawlaty
 
 
 <!-- Security scan triggered at 2026-08-31 16:22:46 -->

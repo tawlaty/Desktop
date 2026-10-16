@@ -1,5 +1,5 @@
 /**
- * Preload Script – BaristaFlow Desktop
+ * Preload Script – Tawlaty Desktop
  * Exposes a safe, typed API to the renderer via contextBridge.
  * NEVER expose full ipcRenderer or Node modules.
  */

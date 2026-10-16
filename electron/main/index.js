@@ -1,5 +1,5 @@
 /**
- * Electron Main Process – BaristaFlow Desktop
+ * Electron Main Process – Tawlaty Desktop
  * Security: contextIsolation=true, nodeIntegration=false, sandbox enabled
  */
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
@@ -111,7 +111,7 @@ function createMainWindow() {
 function createAppMenu() {
   const template = [
     {
-      label: 'Baristaflow',
+      label: 'Tawlaty',
       submenu: [
         { label: `Version ${app.getVersion()}`, enabled: false },
         { type: 'separator' },
@@ -134,13 +134,13 @@ function createAppMenu() {
         },
         { type: 'separator' },
         {
-          label: 'About Baristaflow',
+          label: 'About Tawlaty',
           click: () => {
             const { dialog } = require('electron');
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'About Baristaflow',
-              message: 'Baristaflow POS',
+              title: 'About Tawlaty',
+              message: 'Tawlaty POS',
               detail: `Version: ${app.getVersion()}\nElectron: ${process.versions.electron}\nNode: ${process.versions.node}\nChromium: ${process.versions.chrome}`,
               buttons: ['OK'],
             });
@@ -155,10 +155,10 @@ function createAppMenu() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../../assets/logo.png');
+  const iconPath = path.join(__dirname, '../../assets/tray.png');
   const trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
   tray = new Tray(trayIcon);
-  tray.setToolTip('Baristaflow');
+  tray.setToolTip('Tawlaty');
 
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show', click: () => mainWindow?.show() },

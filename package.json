@@ -1,8 +1,8 @@
 {
   "name": "baristaflow",
-  "version": "1.1.0",
-  "productName": "Baristaflow",
-  "description": "BaristaFlow POS – Electron Desktop App",
+  "version": "1.2.0",
+  "productName": "Tawlaty",
+  "description": "Tawlaty POS – Desktop App",
   "main": "electron/main/index.js",
   "scripts": {
     "start": "electron .",
@@ -12,7 +12,7 @@
     "publish": "electron-builder --win --x64 --publish always",
     "lint": "eslint ."
   },
-  "author": "BaristaFlow",
+  "author": "Tawlaty",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,7 +20,8 @@
   },
   "build": {
     "appId": "com.baristaflow.pos",
-    "productName": "Baristaflow",
+    "productName": "Tawlaty",
+    "artifactName": "Tawlaty-Setup-${version}.${ext}",
     "directories": {
       "output": "production-exe"
     },
