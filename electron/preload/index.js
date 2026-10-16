@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'app:online',
       'app:offline',
       'db:ready',
+      'update:downloaded',
     ];
     if (allowedChannels.includes(channel)) {
       const subscription = (_event, ...args) => callback(...args);

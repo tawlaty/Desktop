@@ -34,6 +34,8 @@ jobs:
           fi
 
   build-and-release:
+    permissions:
+      contents: write
     needs: check-version
     if: needs.check-version.outputs.changed == 'true'
     runs-on: windows-latest
@@ -56,4 +58,4 @@ jobs:
       - name: Build and publish Electron app
         run: npm run publish
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,54 +1,66 @@
 /**
- * Auto-Updater Module - GitHub Releases Integration
- * Handles checking for updates, downloading, and notifying users
+ * Auto-Updater Module - GitHub Releases Integration (tawlaty/Desktop, public)
+ *
+ * Updates download silently in the background and install on quit. When a
+ * download finishes the user gets one non-blocking "restart now / later"
+ * prompt; "Later" simply installs on the next quit. We never force a restart.
  */
 const { autoUpdater } = require('electron-updater');
-const { dialog, Notification, app } = require('electron');
+const { dialog, app } = require('electron');
 
-// Configure updater
-autoUpdater.autoDownload = false; // Don't auto-download, ask user first
+const FIRST_CHECK_DELAY_MS = 3 * 1000;
+const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+
+autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
 let mainWindow = null;
-let updateAvailable = false;
+let initialized = false;
+let manualCheckPending = false;
+let restartPromptOpen = false;
 
-/**
- * Show red notification badge when update is available
- */
-function showUpdateNotification() {
-  updateAvailable = true;
-  
-  // Send to renderer to show red badge
+function sendToRenderer(channel, ...args) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('update-available-notification', true);
-  }
-
-  // Show system notification
-  if (Notification.isSupported()) {
-    const notification = new Notification({
-      title: 'Baristaflow Update Available',
-      body: 'A new version is ready to download. Click to update.',
-      urgency: 'critical',
-    });
-    
-    notification.on('click', () => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show();
-        promptForUpdate();
-      }
-    });
-    
-    notification.show();
+    mainWindow.webContents.send(channel, ...args);
   }
 }
 
 /**
- * Prompt user to download update
+ * Silent background check (startup + interval). Errors are logged only.
  */
-function promptForUpdate() {
-  if (!updateAvailable) return;
-  
-  autoUpdater.checkForUpdates();
+function backgroundCheck() {
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('Update check failed:', err.message);
+  });
+}
+
+/**
+ * One non-blocking prompt once an update is downloaded. Intentionally not
+ * parented to the main window so the cashier can keep working while it is open.
+ */
+function promptRestart(info) {
+  if (restartPromptOpen) return;
+  restartPromptOpen = true;
+
+  dialog
+    .showMessageBox({
+      type: 'info',
+      title: 'Update ready',
+      message: `Version ${info.version} is ready to install.`,
+      detail: 'Restart now, or choose Later to install it the next time the app closes.',
+      buttons: ['Restart now', 'Later'],
+      defaultId: 1,
+      cancelId: 1,
+    })
+    .then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall(false, true);
+      }
+    })
+    .catch((err) => console.error('Update prompt failed:', err))
+    .finally(() => {
+      restartPromptOpen = false;
+    });
 }
 
 /**
@@ -57,120 +69,58 @@ function promptForUpdate() {
  */
 function initializeUpdater(window) {
   mainWindow = window;
-  
+
   if (!app.isPackaged) {
     console.log('Auto-updater disabled in development mode');
     return;
   }
+  if (initialized) return;
+  initialized = true;
 
-  // Check for updates on app start (after 3 seconds)
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(err => {
-      console.log('Update check failed (this is normal if no releases exist yet):', err.message);
-    });
-  }, 3000);
-
-  // Event: Update available
   autoUpdater.on('update-available', (info) => {
-    updateAvailable = true;
-    
-    // Show red notification
-    showUpdateNotification();
-    
-    dialog
-      .showMessageBox(mainWindow, {
-        type: 'info',
-        title: '🔴 Update Available',
-        message: `A new version (${info.version}) is available!`,
-        detail: 'Would you like to download it now?',
-        buttons: ['Download', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-      })
-      .then((result) => {
-        if (result.response === 0) {
-          autoUpdater.downloadUpdate();
-          
-          // Hide notification badge during download
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('update-available-notification', false);
-          }
-          
-          // Show download started notification
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Downloading Update',
-            message: 'Update is being downloaded in the background.',
-            detail: 'You will be notified when it\'s ready to install.',
-            buttons: ['OK'],
-          });
-        }
-      });
+    console.log(`Update ${info.version} available, downloading in background`);
   });
 
-  // Event: No update available
   autoUpdater.on('update-not-available', () => {
     console.log('App is up to date');
-    updateAvailable = false;
-    
-    // Hide red badge
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-available-notification', false);
-    }
-  });
-
-  // Event: Download progress
-  autoUpdater.on('download-progress', (progressObj) => {
-    const message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}%`;
-    console.log(message);
-    
-    // Send to renderer if you want to show progress in UI
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-download-progress', progressObj);
-    }
-  });
-
-  // Event: Update downloaded
-  autoUpdater.on('update-downloaded', (info) => {
-    updateAvailable = false;
-    
-    // Hide red badge
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-available-notification', false);
-    }
-    
-    dialog
-      .showMessageBox(mainWindow, {
+    if (manualCheckPending) {
+      manualCheckPending = false;
+      dialog.showMessageBox(mainWindow, {
         type: 'info',
-        title: 'Update Ready',
-        message: `Version ${info.version} has been downloaded.`,
-        detail: 'The update will be installed when you restart the application. Restart now?',
-        buttons: ['Restart Now', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-      })
-      .then((result) => {
-        if (result.response === 0) {
-          autoUpdater.quitAndInstall(false, true);
-        }
+        title: 'No Updates Available',
+        message: 'You are running the latest version!',
+        detail: `Current version: ${app.getVersion()}`,
+        buttons: ['OK'],
       });
+    }
   });
 
-  // Event: Error
+  autoUpdater.on('download-progress', (progressObj) => {
+    sendToRenderer('update-download-progress', progressObj);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    manualCheckPending = false;
+    sendToRenderer('update:downloaded', { version: info.version });
+    promptRestart(info);
+  });
+
+  // Never show error dialogs from here; manual checks report via checkForUpdates().
   autoUpdater.on('error', (error) => {
     console.error('Auto-updater error:', error);
-    // Optionally show error to user
-    // dialog.showErrorBox('Update Error', 'Failed to check for updates. Please try again later.');
   });
+
+  setTimeout(backgroundCheck, FIRST_CHECK_DELAY_MS);
+  setInterval(backgroundCheck, CHECK_INTERVAL_MS);
 }
 
 /**
- * Manually check for updates
+ * Manually check for updates (menu item / renderer button)
  * @param {BrowserWindow} window - The main application window
  */
 function checkForUpdates(window) {
   if (window) mainWindow = window;
-  
+
   if (!app.isPackaged) {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
@@ -181,35 +131,19 @@ function checkForUpdates(window) {
     });
     return;
   }
-  
-  // Show checking message (non-blocking)
-  console.log('Checking for updates...');
-  
-  autoUpdater.checkForUpdates()
-    .then(() => {
-      // If no update, show message after a delay
-      setTimeout(() => {
-        if (!updateAvailable) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'No Updates Available',
-            message: 'You are running the latest version!',
-            detail: `Current version: ${app.getVersion()}`,
-            buttons: ['OK'],
-          });
-        }
-      }, 3000);
-    })
-    .catch((err) => {
-      console.error('Update check error:', err);
-      dialog.showMessageBox(mainWindow, {
-        type: 'warning',
-        title: 'Cannot Check for Updates',
-        message: 'Unable to check for updates at this time.',
-        detail: 'This could mean:\n• No releases published on GitHub yet\n• No internet connection\n• GitHub is unreachable\n\nYour app will continue to work normally.',
-        buttons: ['OK'],
-      });
+
+  manualCheckPending = true;
+  autoUpdater.checkForUpdates().catch((err) => {
+    manualCheckPending = false;
+    console.error('Update check error:', err);
+    dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Cannot Check for Updates',
+      message: 'Unable to check for updates at this time.',
+      detail: 'Check your internet connection and try again. Your app will continue to work normally.',
+      buttons: ['OK'],
     });
+  });
 }
 
 module.exports = {
